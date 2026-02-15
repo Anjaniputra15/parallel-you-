@@ -1,9 +1,8 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "parallel-you",
+  "name": "parallel-you-123",
   "compatibility_date": "2026-02-14",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -11,7 +10,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "parallel-you"
+      "service": "parallel-you-123"
     }
   ]
 }
