@@ -169,7 +169,7 @@ Sophiie senior engineers and CTO. Judging will take place over a 2-week period f
 |-------|-------------|
 | **Project Name** | Parallel You |
 | **One-Line Description** | Two AI personas debate your toughest decisions — you control the conversation, they provide the clarity. |
-| **Demo Video Link** | *[Add your video link here]* |
+| **Demo Video Link** | https://www.youtube.com/watch?v=Aja9KPUA_dc |
 | **Tech Stack** | Next.js 16, TypeScript, Auth.js v5, Tailwind CSS, shadcn/ui, Web Speech API |
 | **AI Provider(s) Used** | OpenAI GPT-4o-mini, Google Gemini 2.0 Flash |
 
