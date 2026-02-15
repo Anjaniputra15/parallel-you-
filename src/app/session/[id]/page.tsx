@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SessionData, DebateMessage } from "@/lib/types";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 
 // ─── Design System Tokens ───
 const T = {
@@ -349,9 +351,64 @@ export default function PremiumDebatePage() {
   const [animatingMsgId, setAnimatingMsgId] = useState<string | null>(null);
   const [pushbackOpen, setPushbackOpen] = useState(false);
   const [reframeOpen, setReframeOpen] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceCommandsEnabled, setVoiceCommandsEnabled] = useState(false);
   const scrollRefA = useRef<HTMLDivElement>(null);
   const scrollRefB = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSpokenMessageId = useRef<string | null>(null);
+
+  // Voice synthesis
+  const { speak, cancel, isSpeaking, voices } = useSpeechSynthesis();
+
+  // Voice commands
+  useVoiceCommands({
+    enabled: voiceCommandsEnabled && phase === "debating",
+    commands: [
+      {
+        command: "pause",
+        aliases: ["stop", "wait"],
+        action: () => {
+          setPaused(true);
+          toast.success("Voice command: Paused");
+        },
+      },
+      {
+        command: "continue",
+        aliases: ["resume", "go", "play"],
+        action: () => {
+          if (paused) {
+            setPaused(false);
+            toast.success("Voice command: Resumed");
+          }
+        },
+      },
+      {
+        command: "push back",
+        aliases: ["challenge", "disagree"],
+        action: () => {
+          setPushbackOpen(true);
+          toast.success("Voice command: Push back");
+        },
+      },
+      {
+        command: "reframe",
+        aliases: ["change perspective", "different angle"],
+        action: () => {
+          setReframeOpen(true);
+          toast.success("Voice command: Reframe");
+        },
+      },
+      {
+        command: "undo",
+        aliases: ["go back", "remove last"],
+        action: () => {
+          handleUndo();
+          toast.success("Voice command: Undo");
+        },
+      },
+    ],
+  });
 
   // Fetch session data on mount (no turn fired)
   useEffect(() => {
@@ -498,6 +555,33 @@ export default function PremiumDebatePage() {
       setLoading(false);
     }
   }
+
+  function handleUndo() {
+    if (!session || session.messages.length === 0) return;
+    const updated = { ...session, messages: session.messages.slice(0, -1) };
+    setSession(updated);
+    toast.success("Removed last message");
+  }
+
+  // Auto-speak new messages when voice is enabled
+  useEffect(() => {
+    if (!voiceEnabled || !session || !session.messages.length) return;
+
+    const lastMessage = session.messages[session.messages.length - 1];
+    if (lastMessage.id === lastSpokenMessageId.current) return;
+
+    // Only speak AI personas, not user messages
+    if (lastMessage.role === "persona_a" || lastMessage.role === "persona_b") {
+      lastSpokenMessageId.current = lastMessage.id;
+
+      // Use different voices for different personas
+      const voiceIndex = lastMessage.role === "persona_a" ? 0 : 1;
+      const rate = lastMessage.role === "persona_a" ? 1.1 : 0.95; // Risk-taker speaks faster
+      const pitch = lastMessage.role === "persona_a" ? 1.1 : 0.9;
+
+      speak(lastMessage.content, voiceIndex, rate, pitch);
+    }
+  }, [session, voiceEnabled, speak]);
 
   const turnCount = session?.turnCount || 0;
   const roundNum = Math.floor(turnCount / 2) + 1;
@@ -773,6 +857,27 @@ export default function PremiumDebatePage() {
 
                   <div style={{ flex: 1 }} />
 
+                  <ControlButton
+                    icon={voiceEnabled ? "🔊" : "🔇"}
+                    label={voiceEnabled ? "Voice On" : "Voice Off"}
+                    onClick={() => {
+                      setVoiceEnabled(!voiceEnabled);
+                      if (voiceEnabled) cancel();
+                      toast.success(voiceEnabled ? "Voice output disabled" : "Voice output enabled");
+                    }}
+                    color={voiceEnabled ? T.green : T.textMuted}
+                    isActive={voiceEnabled}
+                  />
+                  <ControlButton
+                    icon={voiceCommandsEnabled ? "🎤" : "🎙️"}
+                    label={voiceCommandsEnabled ? "Commands On" : "Commands Off"}
+                    onClick={() => {
+                      setVoiceCommandsEnabled(!voiceCommandsEnabled);
+                      toast.success(voiceCommandsEnabled ? "Voice commands disabled" : 'Voice commands enabled - say "pause", "continue", etc.');
+                    }}
+                    color={voiceCommandsEnabled ? T.personaA : T.textMuted}
+                    isActive={voiceCommandsEnabled}
+                  />
                   <ControlButton
                     icon="⏭"
                     label="Verdict"

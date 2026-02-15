@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { GitFork, Loader2, ArrowLeft, Pencil, Sparkles, X } from "lucide-react";
+import { GitFork, Loader2, ArrowLeft, Pencil, Sparkles, X, Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { SessionData, Calibration } from "@/lib/types";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 export default function NewSessionPage() {
   const router = useRouter();
@@ -32,6 +33,17 @@ export default function NewSessionPage() {
   });
 
   const [editingAssumptions, setEditingAssumptions] = useState<string[]>([]);
+
+  // Voice input for decision
+  const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition({
+    onResult: (transcript) => {
+      setDecision(transcript);
+      toast.success("Got it! Feel free to edit if needed.");
+    },
+    onError: (error) => {
+      toast.error("Couldn't hear you. Please try again.");
+    },
+  });
 
   async function handleGenerate() {
     if (!decision.trim()) {
@@ -150,12 +162,38 @@ export default function NewSessionPage() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-1.5">
-              <Label>Decision *</Label>
-              <Input
-                placeholder="e.g., Should I quit my job to start a company?"
-                value={decision}
-                onChange={(e) => setDecision(e.target.value)}
-              />
+              <Label className="flex items-center justify-between">
+                <span>Decision *</span>
+                {isSupported && (
+                  <span className="text-xs text-muted-foreground">or speak it →</span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  placeholder="e.g., Should I quit my job to start a company?"
+                  value={decision}
+                  onChange={(e) => setDecision(e.target.value)}
+                  className="pr-12"
+                />
+                {isSupported && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isListening ? "destructive" : "ghost"}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                    onClick={isListening ? stopListening : startListening}
+                  >
+                    {isListening ? (
+                      <MicOff className="h-4 w-4 animate-pulse" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+              {isListening && (
+                <p className="text-xs text-orange-500 animate-pulse">🎤 Listening...</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
